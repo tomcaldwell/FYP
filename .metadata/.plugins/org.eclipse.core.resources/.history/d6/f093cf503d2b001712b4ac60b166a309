@@ -1,0 +1,598 @@
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.Stack;
+
+import org.gt4j.annas.graph.EdgeInterface;
+import org.gt4j.annas.graph.GraphInterface;
+import org.gt4j.annas.graph.util.traverse.LexBFS;
+
+public class CliqueSeparator2<V, E extends EdgeInterface<V>> {
+
+	private DecompositionNode root;
+
+	private GraphInterface<V, E> graph;
+	
+	//private GraphInterface<V, E> theGraph = this.graph;
+	
+	//int step;
+	//V m;
+	//V n;
+
+	public CliqueSeparator2(GraphInterface<V, E> graph) {
+		super();
+		this.graph = graph;
+	}
+
+	public ArrayList<ArrayList<V>> construct(DecompositionNode decompNode, ArrayList<ArrayList<V>> Atoms) {
+		ArrayList<V> Atom = new ArrayList<>();
+		ArrayList<V> lastLeaf = new ArrayList<>();
+		
+		List<V> ordering = this.getMinimalEliminationOrdering(this.graph);
+		
+		for(int i=0; i<ordering.size(); i++){
+			V v = ordering.get(i);
+			DecompositionNode csn = decompose(decompNode, v, i);
+			if(csn!=null){
+				DecompositionNode left = csn.getLeftChild();
+				DecompositionNode right = csn.getRightChild();
+				Atom.addAll(left.getVertices());
+				Atoms.add(Atom);
+				construct(right, Atoms);
+			}
+			
+		}
+		//lastLeaf.addAll(right.getVertices());
+		if(Atom.size()==0){
+			Atom.addAll(ordering);
+			Atoms.add(Atom);
+		}
+		
+		//System.out.println(Atom);
+		return Atoms;
+	}
+
+	public DecompositionNode decompose(DecompositionNode dn, V v, int i) {
+		List<V> order;
+		GraphInterface<V, E> decompNode;
+		if(dn!=null){
+			List<V> vertices = new ArrayList<>(dn.getVertices());
+			decompNode=getGraph(vertices);
+			order = getMinimalEliminationOrdering(decompNode);
+		}
+		else{
+			decompNode=this.graph;
+			order = getMinimalEliminationOrdering(graph);
+		}
+		
+		List<V> AA = new ArrayList<>();
+		Collection<V> C = this.getC(v, order, i);
+		Collection<V> A = this.getConnectedComponent(v, C);
+		Collection<V> B = new ArrayList<>(decompNode.getVertices());
+		B.removeAll(C);
+		B.removeAll(A);
+		
+		AA.addAll(A);
+
+		if (isCutset(order,C) && isClique(C) && !B.isEmpty() && C.size()!=0 && isConnected(AA)) {
+			Atom a = new Atom(A);
+			a.addvertices(C);
+			
+			CliqueSeparatorNode csn = new CliqueSeparatorNode(C, B);
+			csn.setLeftChild(a);
+			
+			DecompositionNode dn_new = new DecompositionNode(B);
+			dn_new.addvertices(C);
+
+			csn.setRightChild(dn_new);
+			
+			return csn;
+
+		}
+
+		return null;
+	}
+
+	public boolean isConnected(List<V> vertices){
+		GraphInterface<V, E> graph = getGraph(vertices);
+		HashSet<V> visited = new HashSet<>();
+		for(int i=0; i<vertices.size(); i++){
+			for(int j =i+1; j<vertices.size(); j++){
+				if(i!=j){
+					visited.clear();
+					V v = vertices.get(i);
+					V u = vertices.get(j);
+					if(!isPath(visited,v,u,graph)){
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+
+	public Collection<V> getConnectedComponent(V v, Collection<V> avoidingC) {
+		List<V> order = getMinimalEliminationOrdering(this.graph);
+		order.removeAll(avoidingC);
+		GraphInterface<V, E> graph = getGraph(order);
+		List<V> vertices = new ArrayList<>(graph.getVertices());
+		HashSet<V> visited = new HashSet<>();
+		List<V> Comp = new ArrayList<>();
+		
+		for(V d : vertices){
+			visited.clear();
+			if(isPath(visited,v,d,graph)){
+				Comp.add(d);
+			}
+		}
+		Comp.add(v);
+		return Comp;
+	}
+
+	public List<V> getC(V v, List<V> order, int i) {
+		
+		List<V> C = new ArrayList<>();
+		List<V> in = new ArrayList<>();
+		in.addAll(order);
+		//GraphInterface<V, E> theGraph=this.graph;
+
+		for (int j=i+1; j<order.size(); j++){
+			//GraphInterface<V, E> graph = getGraph(order);
+			C.add(order.get(j));
+			if(isClique(C) && isCutset(in,C) && !C.contains(v)){
+				return C;
+			}
+		}
+
+		return C;
+	}
+	
+	public boolean isClique(Collection<V> clique) {
+
+		for (V v : clique) {
+			for (V u : clique) {
+				if (!v.equals(u) && !this.graph.containsEdge(v, u)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	public boolean isCutset(List<V> order, Collection<V> C) {
+		
+		List<V> out = new ArrayList<>(order);
+		out.removeAll(C);
+		//GraphInterface<V, E> graph = getGraph(out);
+		
+		//List<V> out = getMinimalEliminationOrdering(graph);
+
+		boolean iscutset = false;
+		
+		HashSet<V> visited = new HashSet<>();
+
+		for (int i=0; i<out.size(); i++){
+			for(int j=i+1; j<out.size(); j++){
+				visited.clear();
+				if(out.get(i)!=out.get(j) && !isPath(visited,out.get(j),out.get(i),this.graph,out)){
+					iscutset=true;
+					return iscutset;
+				}
+			}
+		}
+		return iscutset;
+	}
+
+	public List<V> getMinimalEliminationOrdering(GraphInterface<V, E> graph) {
+		
+		
+		List<V> out = getLex(graph);
+		if(out==null){
+			out= new ArrayList<>(graph.getVertices());
+		}
+
+		List<V> order = new ArrayList<>();
+		
+		HashSet<V> visited = new HashSet<>();
+		
+		
+		for (int i=out.size()-1; i>1; i--){
+			
+			V v = out.get(i);
+			
+			for (int j=1; j<100000; j++){
+				for(V n : out){
+					visited.clear();
+					if(getStep(visited,0,n,v,graph)==j){
+						order.add(n);
+						if(order.size()==out.size()-1){
+							order.add(v);
+							return order;
+						}
+					}
+				}
+				
+			}				
+		}
+		for(V x : out){
+			if(!order.contains(x)){
+				order.add(x);
+			}
+		}
+		return order;		
+	}
+	
+	public List<V> getLex(GraphInterface<V, E> graph){
+		LexBFS<V> lex = new LexBFS<V>(graph);
+		
+		List<V> out = lex.getOrder();
+		
+		return out;
+	}
+	
+	public int getStep(HashSet<V> visited, int step, V v, V w, GraphInterface<V, E> graph) {
+				
+		if(v.equals(w)){
+			return step;
+		}
+		if(graph.containsEdge(v, w)){
+			step++;
+			return step;
+		}
+		for(V p : allNeighbours(graph,v)){
+			if(allNeighbours(graph,w).contains(p)){
+				step++;
+				step++;
+				return step;
+			}
+		}
+		for(V f : allNeighbours(graph,v)){
+			for(V z : allNeighbours(graph,w)){
+				if(graph.containsEdge(f, z)){
+					step++;
+					step++;
+					step++;
+					return step;
+				}
+			}
+		}
+		
+		
+		if(Chordless(visited,step,v,w,graph)){
+			List<V> visi = new ArrayList<>(visited);
+			if(noChord(visi,graph)){
+				step=visited.size()-1;
+				return step;
+			}
+			
+		}
+		
+		visited.addAll(graph.getVertices());
+		
+		List<V> vis = new ArrayList<>(visited);
+		
+		if(vis.indexOf(v)>vis.indexOf(w)){
+			V l = v;
+			v=w;
+			w=l;
+		}
+		
+		int s = vis.indexOf(v);
+		vis.remove(w);
+		vis.add(w);		
+		List<V> rems = new ArrayList<>();
+		
+		if(s!=0){
+			for(int t=0; t<s; t++){
+				rems.add(vis.get(t));
+			}
+		}
+		
+		
+		vis.removeAll(rems);
+		
+		int i=0;
+		
+		for(int j=i+1; j<vis.size(); j++){
+			if(graph.containsEdge(vis.get(i), vis.get(j))){
+				vis.removeAll(rems);
+				break;
+			}
+			else{
+				rems.add(vis.get(j));
+			}
+		}
+		
+		
+		for(int n=0; n<vis.size(); n++){
+			for(int x=vis.size()-1; x>n; x--){
+				if(graph.containsEdge(vis.get(n), vis.get(x))){
+					for(int y = n+1; y<x; y++){
+						rems.add(vis.get(y));
+					}
+					vis.removeAll(rems);
+					if(path(vis,graph) && noChord(vis,graph)){
+						step=vis.size()-1;
+						return step;
+					}
+					break;
+				}
+			}
+		}
+	
+		step=vis.size()-1;
+		return step;
+	}
+	
+	public boolean noChord(List<V> path, GraphInterface<V, E> graph){
+		for(int m=0; m<path.size(); m++){
+			for(int n=m+1; n<path.size(); n++){
+				for(int o=n+1; o<path.size(); o++){
+					if(graph.containsEdge(path.get(m), path.get(n)) && graph.containsEdge(path.get(m), path.get(o)) && graph.containsEdge(path.get(o), path.get(n))){
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
+	
+	public boolean path(List<V> path, GraphInterface<V, E> graph){
+		for(int i=0; i<path.size()-1; i++){
+			int j=i+1;
+			List<V> vis = new ArrayList<>(path);
+			if(!graph.containsEdge(vis.get(i), vis.get(j))){
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	
+	public boolean Chordless(HashSet<V> visited, int step, V v, V w, GraphInterface<V, E> graph) {
+		List<V> order = new ArrayList<>(graph.getVertices());
+		if(isPath(visited,v,w,graph,order)){
+			step=visited.size()-1;
+		}
+		
+		for(int i=0; i<visited.size()-1; i++){
+			int j=i+1;
+			List<V> vis = new ArrayList<>(visited);
+			if(!graph.containsEdge(vis.get(i), vis.get(j)) || !vis.get(0).equals(v) || !vis.get(vis.size()-1).equals(w)){
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	public boolean isPath(HashSet<V> visited, V v, V w, GraphInterface<V, E> graph, List<V> order) {
+		if(order.indexOf(v)<order.indexOf(w)){
+			V l = v;
+			v=w;
+			w=l;
+		}
+		
+		List<V> allVerts = new ArrayList<>(graph.getVertices());
+		allVerts.removeAll(order);
+		visited.addAll(allVerts);
+		
+		if(visited.containsAll(graph.getVertices())){
+			return false;
+		}
+		boolean ispath = false;
+		visited.add(v);
+		visited.add(w);
+		List<V> vNeighbours = new ArrayList<>(allNeighbours(graph, v));
+		List<V> wNeighbours = new ArrayList<>(allNeighbours(graph, w));
+		
+		if(graph.containsEdge(w, v) || v.equals(w)){
+			ispath = true;
+			return true;
+		}
+		
+		vNeighbours.removeAll(visited);
+		wNeighbours.removeAll(visited);
+		
+		if(vNeighbours.isEmpty() || wNeighbours.isEmpty()){
+			ispath=false;
+			return ispath;
+		}
+		List<V> visit = new ArrayList<>(visited);
+		
+		for(V g : vNeighbours){
+			for(V h : wNeighbours){
+				if(h.equals(g) || graph.containsEdge(h,g)){
+					ispath=true;
+					return ispath;
+				}
+			}
+		}
+		
+		for(V k : vNeighbours){
+			for(int r=0; r<visit.size()-1; r++){
+				for(int s=r+1; s<visit.size(); s++){
+					if(order.indexOf(k)>order.indexOf(visit.get(r)) && order.indexOf(k)>order.indexOf(visit.get(s)) && graph.containsEdge(k,visit.get(r)) && graph.containsEdge(k,visit.get(s))){
+						visited.add(k);
+						break;
+					}
+				}
+			}
+		}
+		
+		/*for(V l : wNeighbours){
+			for(int r=0; r<visit.size()-1; r++){
+				for(int s=r+1; s<visit.size(); s++){
+					if(graph.containsEdge(l,visit.get(r)) && graph.containsEdge(l,visit.get(s))){
+						visited.add(l);
+					}
+				}
+			}
+		}*/
+		
+		vNeighbours.removeAll(visited);
+		wNeighbours.removeAll(visited);
+		
+		if(vNeighbours.isEmpty() || wNeighbours.isEmpty()){
+			ispath=false;
+			return ispath;
+		}
+		
+		
+		for(V n : vNeighbours){
+			for(V m : wNeighbours){
+				if(isPath(visited, n, m, graph, order)){
+					
+					ispath=true;
+					return ispath;
+				}
+				else{
+					
+					visit.add(n);
+					HashSet<V> vis = new HashSet<>(visit);
+					if(isPath(vis, n, m, graph, order)){
+						ispath=true;
+						return ispath;
+					}
+				}
+				/*else{
+					visited.clear();
+					visited.add(v);
+					visited.add(w);
+					for(int x=allNeighbours(graph, v).size()-1; x<=0; x--){
+						for(V y : allNeighbours(graph, w)){
+							if(isPath(visited, allNeighbours(graph, v).get(x), y, graph)){
+								visited.add(n);
+								visited.add(m);
+								
+								ispath=true;
+								return ispath;
+							}
+						}
+					}
+				}*/
+			}
+		}
+		
+		
+		return ispath;
+		
+	}
+	
+	public GraphInterface<V, E> getGraph(List<V> order){
+		List<V> ord = new ArrayList<>(this.graph.getVertices());
+		GraphInterface<V, E> newGraph = this.graph;
+		List<V> nonVerts = new ArrayList<>();
+		if(order.size()!=0){
+			for(V d : ord){
+				if(!order.contains(d)){
+					nonVerts.add(d);
+				}
+			}
+			newGraph.removeVertices(nonVerts);
+			return newGraph;
+		}
+		return null;
+	}
+	
+	public List<V> allNeighbours(GraphInterface<V, E> graph, V v){
+		List<V> neighbours = new ArrayList<V>();
+		
+		List<V> out = new ArrayList<>(graph.getVertices());
+		
+		for (int j =out.size()-1; j >=0; j--) {
+			V ret = out.get(j);
+			if (!v.equals(ret) && graph.getEdges(v, ret).size() != 0 && !neighbours.contains(ret)) {
+				neighbours.add(ret);
+			}
+		}
+		return neighbours;
+	}
+
+	public List<V> neighboursOf(GraphInterface<V, E> graph, List<V> out, V v) {
+		ArrayList<V> l = new ArrayList<V>();
+		int i = out.indexOf(v);
+
+		for (int j = i - 1; j >= 0; j--) {
+			V ret = out.get(j);
+			if (graph.getEdges(v, ret).size() != 0) {
+				l.add(ret);
+			}
+		}
+		return l;
+	}
+
+	public class DecompositionNode {
+
+		private DecompositionNode leftChild;
+
+		private DecompositionNode rightChild;
+
+		private Collection<V> vertices;
+
+		public DecompositionNode(Collection<V> vertices) {
+			super();
+			this.vertices = vertices;
+		}
+
+		public DecompositionNode getLeftChild() {
+			return leftChild;
+		}
+
+		public void setLeftChild(DecompositionNode leftChild) {
+			this.leftChild = leftChild;
+		}
+
+		public DecompositionNode getRightChild() {
+			return rightChild;
+		}
+
+		public void setRightChild(DecompositionNode rightChild) {
+			this.rightChild = rightChild;
+		}
+
+		public Collection<V> getVertices() {
+			return vertices;
+		}
+
+		public void setVertices(Collection<V> vertices) {
+			this.vertices = vertices;
+		}
+
+		public void addvertices(Collection<V> verts) {
+			this.vertices.addAll(verts);
+		}
+
+	}
+
+	public class CliqueSeparatorNode extends DecompositionNode {
+
+		private Collection<V> separator;
+
+		public CliqueSeparatorNode(Collection<V> separator, Collection<V> vertices) {
+			super(vertices);
+			this.separator = separator;
+		}
+
+		public Collection<V> getSeparator() {
+			return separator;
+		}
+
+		public void setSeparator(Collection<V> separator) {
+			this.separator = separator;
+		}
+
+	}
+
+	private class Atom extends DecompositionNode {
+
+		public Atom(Collection<V> vertices) {
+			super(vertices);
+
+		}
+
+	}
+}

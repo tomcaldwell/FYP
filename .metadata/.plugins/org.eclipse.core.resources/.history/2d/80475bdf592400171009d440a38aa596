@@ -1,0 +1,98 @@
+import static org.junit.Assert.assertTrue;
+
+import java.util.Collection;
+
+import org.gt4j.annas.graph.DefaultEdge;
+import org.gt4j.annas.graph.GraphInterface;
+import org.gt4j.annas.graph.UndirectedGraph;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+
+public class Recognition {
+	
+	private GraphInterface<String, DefaultEdge> graph;
+	private Condition1<String, DefaultEdge> cond1;
+	private Condition2<String, DefaultEdge> cond2;
+	private CliqueSeparator2<String, DefaultEdge> decomposition;
+	
+	
+	String a = "A";
+	String b = "B";
+	String c = "C";
+	String d = "D";
+	String e = "E";
+	String f = "F";
+	String g = "G";
+	String h = "H";
+	String i = "I";
+	String j = "J";
+	String k = "K";
+	String l = "L";
+	String m = "M";
+	String n = "N";
+	String o = "O";
+	
+	
+	@Before
+	public void setUp() throws Exception {
+
+		graph = new UndirectedGraph<String, DefaultEdge>(
+				DefaultEdge.class);
+
+		graph.addVertex(a);
+		graph.addVertex(b);
+		graph.addVertex(c);
+		graph.addVertex(d);
+		graph.addVertex(e);
+		graph.addVertex(f);
+		
+		DefaultEdge e1 = graph.addEdge(a, b);
+		e1 = graph.addEdge(b, c);
+		e1 = graph.addEdge(c, d);
+		e1 = graph.addEdge(d, e);
+		e1 = graph.addEdge(a, f);
+		e1 = graph.addEdge(b, f);
+		e1 = graph.addEdge(c, f);
+		e1 = graph.addEdge(d, f);
+		e1 = graph.addEdge(e, f);
+	}
+	
+	@After
+	public void tearDown() throws Exception {
+	}
+	
+	@Test
+	public boolean TestGraph() {
+		this.cond1 = new Condition1<String, DefaultEdge>(this.graph);
+		this.cond2 = new Condition2<String, DefaultEdge>(this.graph);
+		
+		
+		boolean checkHole = this.cond1.classify(this.graph);
+		
+		boolean condition2=true;
+		
+		Collection<Collection<String>> connected = this.cond2.call();
+		
+		//////FOR EACH ATOM IN TREE: //////
+		
+		for (Collection V : connected) {
+			if(V.size()>2){
+				condition2 = false;
+			}
+		}
+		
+		if(!condition2 && !checkHole){
+			return false;
+		}
+		else{
+			return true;
+		}
+		
+		////////////////////////////////////
+		
+	}
+	
+	
+}

@@ -1,0 +1,288 @@
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Stack;
+
+import org.gt4j.annas.graph.EdgeInterface;
+import org.gt4j.annas.graph.GraphInterface;
+import org.gt4j.annas.graph.SimpleUndirectedGraph;
+import org.gt4j.annas.graph.util.traverse.LexBFS;
+
+public class CliqueSeparator<V, E extends EdgeInterface<V>> {
+
+	private DecompositionNode dn;
+
+	private GraphInterface<V, E> graph;
+	
+	private List<V> ordering;
+
+	public CliqueSeparator(GraphInterface<V, E> graph) {
+		super();
+		this.graph = graph;
+		this.dn = new DecompositionNode();
+	}
+
+	public List<String> construct() {
+		List<V> ordering = this.getMinimalEliminationOrdering(this.graph);
+		//DecompositionNode dn = this.graph;
+		//System.out.println(ordering);
+		for (int i = 0; i < ordering.size(); i++) {
+			V v = ordering.get(i);
+
+			decompose(dn, v, i);
+			
+		}
+		return null;
+	}
+
+	private DecompositionNode decompose(DecompositionNode dn, V v, int i) {
+				
+		Collection<V> C = this.getC(v, ordering, i);
+		System.out.println(C);
+		Collection<V> A = this.getConnectedComponent(v, C);
+		Collection<V> B = new ArrayList<>(this.graph.getVertices());
+		System.out.println(B);
+		B.removeAll(C);
+		B.removeAll(A);
+
+		if (isClique(C) && !B.isEmpty()) {
+			Atom a = new Atom(A);
+			a.addvertices(C);
+			
+			CliqueSeparatorNode csn = new CliqueSeparatorNode(C, B);
+			csn.setLeftChild(a);
+			
+			//System.out.println(csn);
+			
+			DecompositionNode dn_new = new DecompositionNode(B);
+			dn_new.addvertices(C);
+
+			csn.setRightChild(dn_new);
+
+			graph.removeVertices(A);
+
+			List<V> ordering = this.getMinimalEliminationOrdering(graph);
+
+			for (int j =1; j<ordering.size(); j++){
+
+				decompose(dn_new, v, j);
+			}
+
+		}
+
+		return null;
+	}
+
+	private boolean isClique(Collection<V> vertices) {
+
+		for (V v : vertices) {
+			for (V u : vertices) {
+				if (!v.equals(u) && !this.graph.containsEdge(v, u)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	private Collection<V> getConnectedComponent(V v, Collection<V> avoiding) {
+		Collection<V> visited = new ArrayList<>();
+		Stack<V> stack = new Stack<>();
+		stack.push(v);
+
+		while (!stack.isEmpty()) {
+			V u = stack.pop();
+			if (!visited.contains(u)) {
+				visited.add(u);
+				for (EdgeInterface<V> e : this.graph.getEdges(u)) {
+					V w = e.getOtherEndpoint(u);
+					if (!stack.contains(w) && !avoiding.contains(w)) {
+						stack.push(w);
+					}
+				}
+			}
+		}
+
+		return visited;
+	}
+
+	private Collection<V> getC(V v, List<V> order, int i) {
+		
+		Collection<V> C = new ArrayList<V>();
+
+		 for (int j=i+1; j<order.size(); j++){
+		 	C.add(order.get(j));
+
+			if(isCutset(order, C)){
+				break;
+			}		 
+		 }
+
+		return C;
+	}
+
+	private boolean isCutset(List<V> order, Collection<V> C) {
+
+		boolean iscutset = false;
+
+		order.removeAll(C);
+		//System.out.println(order);
+
+		for (int i=1; i<order.size(); i++){
+			for(int j=1; j<order.size(); j++){
+				if(order.get(i)!=order.get(j) && !isPath(order.get(i),order.get(j),order)){
+					iscutset=true;
+				}
+			}
+		}
+		return iscutset;
+	}
+
+	private List<V> getMinimalEliminationOrdering(GraphInterface<V, E> graph) {
+		
+		LexBFS<V> lex = new LexBFS<V>(graph);
+		
+		List<V> out = lex.getOrder();		
+
+		List<V> order = new ArrayList<V>();
+		
+		//Collection<V, V, List<V>> path = new isPath(graph);
+
+		for (int i=out.size()-1; i>1; i--)
+		{
+			V v = out.get(i);
+
+			List<V> neighbours = this.neighboursOf(graph, out, v);
+
+			for (int j=1; j<out.size(); j++)
+			{
+				V w = out.get(j);
+
+				if (!neighbours.contains(w) && v!=w){
+					
+					//System.out.println(isPath(v,w, out));
+					if(isPath(v,w, out)){
+						//if(this.step < j){
+						order.add(w);
+						//}
+					}
+				}
+			}
+		}
+		
+		//return order;
+		return out;
+	}
+
+	public boolean isPath(V v, V w, List<V> out) {
+
+		boolean ispath = false;
+
+		int step = 1;
+
+		List<V> neighbours = this.neighboursOf(graph, out, v);
+		//System.out.println(neighbours);
+
+		if(v!=w)
+		{
+			if (neighbours.contains(w))
+			{
+				ispath = true;
+			}
+			else{
+				for(int i=1; i<neighbours.size(); i++)
+				{
+					V u = neighbours.get(i);
+
+					this.isPath(u,w,out);
+					step += 1; 
+				}
+			}
+		}
+		return ispath;
+	}
+
+	private List<V> neighboursOf(GraphInterface<V, E> graph, List<V> out, V v) {
+		ArrayList<V> l = new ArrayList<V>();
+		int i = out.indexOf(v);
+
+		for (int j = i - 1; j >= 0; j--) {
+			V ret = out.get(j);
+			if (graph.getEdges(v, ret).size() != 0) {
+				l.add(ret);
+			}
+		}
+		return l;
+	}
+
+	private class DecompositionNode {
+
+		private DecompositionNode leftChild;
+
+		private DecompositionNode rightChild;
+
+		private Collection<V> vertices;
+
+		public DecompositionNode() {
+			super();
+			this.vertices = vertices;
+		}
+
+		public DecompositionNode getLeftChild() {
+			return leftChild;
+		}
+
+		public void setLeftChild(DecompositionNode leftChild) {
+			this.leftChild = leftChild;
+		}
+
+		public DecompositionNode getRightChild() {
+			return rightChild;
+		}
+
+		public void setRightChild(DecompositionNode rightChild) {
+			this.rightChild = rightChild;
+		}
+
+		public Collection<V> getVertices() {
+			return vertices;
+		}
+
+		public void setVertices(Collection<V> vertices) {
+			this.vertices = vertices;
+		}
+
+		public void addvertices(Collection<V> verts) {
+			this.vertices.addAll(verts);
+		}
+
+	}
+
+	private class CliqueSeparatorNode extends DecompositionNode {
+
+		private Collection<V> separator;
+
+		public CliqueSeparatorNode(Collection<V> separator, Collection<V> vertices) {
+			super(vertices);
+			this.separator = separator;
+		}
+
+		public Collection<V> getSeparator() {
+			return separator;
+		}
+
+		public void setSeparator(Collection<V> separator) {
+			this.separator = separator;
+		}
+
+	}
+
+	private class Atom extends DecompositionNode {
+
+		public Atom(Collection<V> vertices) {
+			super(vertices);
+
+		}
+
+	}
+}

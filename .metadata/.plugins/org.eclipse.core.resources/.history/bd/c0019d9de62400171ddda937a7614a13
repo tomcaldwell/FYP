@@ -1,0 +1,539 @@
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Stack;
+
+import org.gt4j.annas.graph.EdgeInterface;
+import org.gt4j.annas.graph.GraphInterface;
+import org.gt4j.annas.graph.util.traverse.LexBFS;
+
+public class CliqueSeparator2<V, E extends EdgeInterface<V>> {
+
+	private DecompositionNode root;
+
+	private GraphInterface<V, E> graph;
+	
+	int step;
+	V m;
+	V n;
+
+	public CliqueSeparator2(GraphInterface<V, E> graph) {
+		super();
+		this.graph = graph;
+	}
+
+	public void construct() {
+		List<V> ordering = this.getMinimalEliminationOrdering(graph);
+
+		int i=0;
+		//for (int i = 0; i < ordering.size(); i++) {
+			V v = ordering.get(i);
+
+			decompose(root, v, i);
+			//DecompositionNode child = root.getLeftChild();
+			//System.out.println(child.getVertices());
+		//}
+	}
+
+	public DecompositionNode decompose(DecompositionNode dn, V v, int i) {
+		List<V> order = this.getMinimalEliminationOrdering(graph);
+		Collection<V> C = this.getC(v, order, i);
+		
+
+		Collection<V> A = this.getConnectedComponent(v, C);
+		Collection<V> B = new ArrayList<>(this.graph.getVertices());
+		B.removeAll(C);
+		B.removeAll(A);
+
+		if (isClique(C) && !B.isEmpty() && C.size()!=0) {
+			Atom a = new Atom(A);
+			a.addvertices(C);
+			
+			CliqueSeparatorNode csn = new CliqueSeparatorNode(C, B);
+			csn.setLeftChild(a);
+			DecompositionNode child = csn.getLeftChild();
+			System.out.println(child.getVertices());
+			DecompositionNode dn_new = new DecompositionNode(B);
+			dn_new.addvertices(C);
+
+			csn.setRightChild(dn_new);
+			
+			A.removeAll(C);
+
+			graph.removeVertices(A);
+			
+			A.addAll(C);
+			
+			//System.out.println("Child: " + A);
+			//System.out.println("Clique Cutset: " + C);
+			//System.out.println("New Decomp Node: "+ B);
+
+			List<V> ordering = this.getMinimalEliminationOrdering(graph);
+
+			for (int j=i; j<ordering.size(); j++){
+
+				decompose(dn_new, ordering.get(j), j);
+			}
+
+		}
+
+		return null;
+	}
+
+	
+
+	public Collection<V> getConnectedComponent(V v, Collection<V> avoidingC) {
+		Collection<V> visited = new ArrayList<>();
+		Stack<V> stack = new Stack<>();
+		stack.push(v);
+
+		while (!stack.isEmpty()) {
+			V u = stack.pop();
+			if (!visited.contains(u)) {
+				visited.add(u);
+				for (EdgeInterface<V> e : this.graph.getEdges(u)) {
+					V w = e.getOtherEndpoint(u);
+					if (!stack.contains(w) && !avoidingC.contains(w)) {
+						stack.push(w);
+					}
+				}
+			}
+		}
+
+		return visited;
+	}
+
+	public List<V> getC(V v, List<V> order, int i) {
+		
+		List<V> C = new ArrayList<>();
+		List<V> in = new ArrayList<>();
+		in.addAll(order);
+
+		for (int j=i+1; j<order.size(); j++){
+			C.add(order.get(j));
+			if(isClique(C) && isCutset(in,C) && !C.contains(v)){
+				//System.out.println(C);
+				return C;
+			}
+		}
+		//System.out.println(C);
+
+		return C;
+	}
+	
+	public boolean isClique(Collection<V> vertices) {
+
+		for (V v : vertices) {
+			for (V u : vertices) {
+				if (!v.equals(u) && this.graph.getEdges(v, u).size()==0) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	public boolean isCutset(List<V> order, Collection<V> C) {
+		
+		List<V> in = new ArrayList<>();
+		in.addAll(order);
+
+		boolean iscutset = false;
+		
+		List<V> visited = new ArrayList<>();
+
+		in.removeAll(C);
+		
+		//this.graph.removeVertices(C);
+
+		for (int i=0; i<in.size(); i++){
+			for(int j=i+1; j<in.size(); j++){
+				visited.clear();
+				if(in.get(i)!=in.get(j) && !isPath(visited,in.get(j),in.get(i),in)){
+					iscutset=true;
+					//this.graph.addVertices(C);
+					//System.out.println("no path between: " + in.get(i) + " and " + in.get(j));
+					return iscutset;
+				}
+			}
+		}
+		//this.graph.addVertices(C);
+		return iscutset;
+	}
+
+	public List<V> getMinimalEliminationOrdering(GraphInterface<V, E> graph) {
+		
+		LexBFS<V> lex = new LexBFS<V>(graph);
+		
+		List<V> out = lex.getOrder();
+
+		List<V> order = new ArrayList<>();
+		
+		List<V> visited = new ArrayList<>();
+		
+		
+		for (int i=out.size()-1; i>1; i--){
+			
+			V v = out.get(i);
+			
+			for (int j=1; j<100000; j++){
+				for(V n : out){
+					visited.clear();
+					if(getStep(visited,0,n,v,out)==j){
+						order.add(n);
+						if(order.size()==out.size()-1){
+							order.add(v);
+							//System.out.println("order: " + order);
+							return order;
+						}
+					}
+				}
+				/*V w = out.get(j);
+
+				if (!neighbours.contains(w) && v!=w){
+					
+					if(this.isPath(visited,v,w, out)){
+						if(getStep(visited,0,v,w,out)<j){
+							order.add(w);
+						}
+					}
+				}*/
+			}				
+		}
+		for(V x : out){
+			if(!order.contains(x)){
+				order.add(x);
+			}
+		}
+		//System.out.println("order: " + order);
+		return order;		
+	}
+
+	
+
+	public int getStep(List<V> visited, int step, V v, V w, List<V> out) {
+		
+		if(visited.containsAll(out)){
+			return step;
+		}
+		
+		//List<shortestPath> shortestPath = new ArrayList<shortestPath>();
+		
+		List<V> remVis = new ArrayList<>();
+		List<V> newVis = new ArrayList<>();
+		List<V> neigh = new ArrayList<>();
+		List<V> neig = new ArrayList<>();
+		List<V> neighbours=allNeighbours(this.graph,out,w);
+		List<V> neighs=allNeighbours(this.graph,out,v);
+		neighbours.removeAll(visited);
+		neighs.removeAll(visited);
+		
+		if(v.equals(w)){
+			visited.add(v);
+			return step;
+		}
+		
+		if(neighbours.contains(v) || neighs.contains(w)){
+			step++;
+			visited.add(v);
+			visited.add(w);
+			return step;
+		}
+		
+		for(V n : neighbours){
+			for(V m : neighs){
+				if(m.equals(n)){
+					step++;
+					step++;
+					visited.add(v);
+					visited.add(w);
+					visited.add(n);
+					visited.add(m);
+					return step;
+				}
+			}
+		}
+		
+		for(V n : neighbours){
+			for(V m : neighs){
+				if(this.graph.containsEdge(m,n)){
+					step++;
+					step++;
+					step++;
+					visited.add(v);
+					visited.add(w);
+					visited.add(n);
+					visited.add(m);
+					return step;
+				}
+				neigh.addAll(allNeighbours(this.graph, out, n));
+				neig.addAll(allNeighbours(this.graph, out, m));
+				for(V x : neigh){
+					for(V y : neig){
+						if(x.equals(y)){
+							step++;
+							step++;
+							step++;
+							step++;
+							visited.add(v);
+							visited.add(w);
+							visited.add(x);
+							visited.add(n);
+							visited.add(m);
+							return step;
+						}
+						if(this.graph.containsEdge(x,y)){
+							step++;
+							step++;
+							step++;
+							step++;
+							step++;
+							visited.add(v);
+							visited.add(w);
+							visited.add(x);
+							visited.add(y);
+							visited.add(n);
+							visited.add(m);
+							return step;
+						}
+					}
+				}
+			}
+		}
+		
+		
+		
+		if(isPath(visited,v,w,out)){
+			step++;
+			step++;
+			visited.add(w);
+			visited.add(v);
+			//System.out.println(v);
+			//System.out.println(w);
+			for(int i =neighbours.size()-1; i>=0; i--){
+				V n=neighbours.get(i);
+				for(V m : neighs){
+					/*for(V x : neighs){
+						if(!m.equals(x) && isPath(newVis,m,n,out) && isPath(newVis,x,n,out) && getStep(newVis,0,m,n,out)>getStep(newVis,0,x,n,out)){
+							System.out.println("m to n: " + m + ": " + getStep(newVis,0,m,n,out));
+							System.out.println("x to n: " + x + ": " + getStep(newVis,0,x,n,out));
+							visited.add(m);
+						}
+					}*/
+					//shortestPath.add(new shortestPath(m,n,getStep(newVis,0,m,n,out)));
+					if((!visited.contains(m) && isPath(newVis,m,n,out)) || (visited.contains(m) && visited.indexOf(m)>visited.indexOf(v) && isPath(newVis,m,n,out))){
+						HashSet<V> hs = new HashSet<>();
+						hs.addAll(visited);
+						visited.clear();
+						visited.addAll(hs);
+						for(int q=visited.indexOf(v)+1; q<visited.size(); q++){
+							remVis.add(visited.get(q));
+						}
+						visited.removeAll(remVis);
+						visited.add(w);
+						return getStep(visited,step,m,n,out);
+					}
+				}
+			}
+		}
+		return step;
+	}
+	
+	
+	public boolean isPath(List<V> visited, V v, V w, List<V> out) {
+
+		boolean ispath = false;
+		
+		List<V> neighbours = new ArrayList<V>();
+		List<V> neighs = new ArrayList<V>();
+		List<V> neigh = new ArrayList<V>();
+		List<V> neig = new ArrayList<V>();
+		
+		neighbours.addAll(allNeighbours(this.graph, out, v));
+		neighs.addAll(allNeighbours(this.graph, out, w));
+		
+		if(graph.getEdges(v, w).size() != 0){
+			ispath = true;
+			return true;
+		}
+		
+		neighbours.add(v);
+		for(V o : neighbours){
+			if(neighbours.containsAll(allNeighbours(this.graph, out, o)) && !visited.contains(o)){
+				visited.add(o);
+			}
+		}
+		neighbours.remove(v);
+				
+		neighbours.removeAll(visited);
+		
+		if(neighbours.size()==0){
+			ispath=false;
+			return false;
+		}
+		
+		for(V n : neighbours){
+			for(V m : neighs){
+				if(m.equals(n) || this.graph.containsEdge(m,n)){
+					visited.add(v);
+					visited.add(w);
+					visited.add(n);
+					visited.add(m);
+					ispath = true;
+					return ispath;
+				}
+				neigh.addAll(allNeighbours(this.graph, out, n));
+				neig.addAll(allNeighbours(this.graph, out, m));
+				for(V x : neigh){
+					for(V y : neig){
+						if(x.equals(y) || this.graph.containsEdge(x,y)){
+							visited.add(v);
+							visited.add(w);
+							ispath = true;
+							return ispath;
+						}
+					}
+				}
+			}
+		}
+		
+		while(!ispath){
+			if(!v.equals(w))
+			{
+				if (this.graph.containsEdge(w, v))
+				{
+					ispath = true;
+					return true;
+				}
+				else{
+					if(out.indexOf(v)<out.indexOf(w)){
+						for(int i=0; i<neighbours.size(); i++){
+							
+							V u = neighbours.get(i);
+
+							if(this.isPath(visited,u,w,out)){
+								return true;
+							}
+							else{
+								return false;
+							}
+							
+						}
+					}
+					else{
+						for(int i=neighbours.size()-1; i>=0; i--){
+							
+							V u = neighbours.get(i);
+
+							if(this.isPath(visited,u,w,out)){
+								return true;
+							}
+							else{
+								return false;
+							}
+							
+						}
+					}
+				}
+			}
+		}
+		return ispath;
+	}
+	
+	public List<V> allNeighbours(GraphInterface<V, E> graph, List<V> out, V v){
+		List<V> neighbours = new ArrayList<V>();
+		
+		for (int j =out.size()-1; j >=0; j--) {
+			V ret = out.get(j);
+			if (!v.equals(ret) && graph.getEdges(v, ret).size() != 0 && !neighbours.contains(ret)) {
+				neighbours.add(ret);
+			}
+		}
+		return neighbours;
+	}
+
+	public List<V> neighboursOf(GraphInterface<V, E> graph, List<V> out, V v) {
+		ArrayList<V> l = new ArrayList<V>();
+		int i = out.indexOf(v);
+
+		for (int j = i - 1; j >= 0; j--) {
+			V ret = out.get(j);
+			if (graph.getEdges(v, ret).size() != 0) {
+				l.add(ret);
+			}
+		}
+		return l;
+	}
+
+	public class DecompositionNode {
+
+		private DecompositionNode leftChild;
+
+		private DecompositionNode rightChild;
+
+		private Collection<V> vertices;
+
+		public DecompositionNode(Collection<V> vertices) {
+			super();
+			this.vertices = vertices;
+		}
+
+		public DecompositionNode getLeftChild() {
+			return leftChild;
+		}
+
+		public void setLeftChild(DecompositionNode leftChild) {
+			this.leftChild = leftChild;
+		}
+
+		public DecompositionNode getRightChild() {
+			return rightChild;
+		}
+
+		public void setRightChild(DecompositionNode rightChild) {
+			this.rightChild = rightChild;
+		}
+
+		public Collection<V> getVertices() {
+			return vertices;
+		}
+
+		public void setVertices(Collection<V> vertices) {
+			this.vertices = vertices;
+		}
+
+		public void addvertices(Collection<V> verts) {
+			this.vertices.addAll(verts);
+		}
+
+	}
+
+	public class CliqueSeparatorNode extends DecompositionNode {
+
+		private Collection<V> separator;
+
+		public CliqueSeparatorNode(Collection<V> separator, Collection<V> vertices) {
+			super(vertices);
+			this.separator = separator;
+		}
+
+		public Collection<V> getSeparator() {
+			return separator;
+		}
+
+		public void setSeparator(Collection<V> separator) {
+			this.separator = separator;
+		}
+
+	}
+
+	private class Atom extends DecompositionNode {
+
+		public Atom(Collection<V> vertices) {
+			super(vertices);
+
+		}
+
+	}
+}

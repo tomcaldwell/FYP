@@ -1,0 +1,38 @@
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Hashtable;
+
+import org.gt4j.annas.graph.DefaultEdge;
+import org.gt4j.annas.graph.EdgeInterface;
+import org.gt4j.annas.graph.GraphInterface;
+import org.gt4j.annas.graph.util.Utilities;
+
+public class Condition2 <V, E extends EdgeInterface<V>> extends Utilities {
+
+	private GraphInterface<V, E> graph;
+	
+	private GraphInterface<V, E> comp;
+	private Collection<Collection<V>> conn;
+
+	public Condition2(final GraphInterface<V, E> graph) {
+		this.graph = graph;
+
+	}
+	
+
+	@SuppressWarnings("rawtypes")
+	public Collection<Collection<V>> call() {
+		this.comp = Utilities.getComplement(this.graph);
+		this.conn = Utilities.getConnectedComponents(this.comp);
+		System.out.println(this.conn);
+				
+		for (Collection V : conn) {
+			if (V.size()>2) {
+				System.out.println("Graph does not satisfy condition 2");
+			}
+		}
+		return conn;
+		
+		
+	}	
+}

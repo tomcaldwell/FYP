@@ -1,0 +1,84 @@
+import static org.junit.Assert.assertTrue;
+
+import java.util.HashSet;
+
+import org.gt4j.annas.DefaultWeightedEdge;
+import org.gt4j.annas.graph.DefaultEdge;
+import org.gt4j.annas.graph.EdgeInterface;
+import org.gt4j.annas.graph.GraphInterface;
+import org.gt4j.annas.graph.UndirectedGraph;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+public class TestCond1 {
+	
+	private GraphInterface<String, DefaultEdge> graph;
+	
+	private Condition1<String, DefaultEdge> cond1;
+
+	
+	String a = "A";
+	String b = "B";
+	String c = "C";
+	String d = "D";
+	String e = "E";
+	String f = "F";
+	String g = "G";
+	String h = "H";
+	
+	
+	
+	@Before
+	public void setUp() throws Exception {
+
+		graph = new UndirectedGraph<String, DefaultEdge>(
+				DefaultEdge.class);
+
+		graph.addVertex(a);
+		graph.addVertex(b);
+		graph.addVertex(c);
+		graph.addVertex(d);
+		graph.addVertex(e);
+		graph.addVertex(f);
+		graph.addVertex(g);
+		graph.addVertex(h);
+
+		DefaultEdge e1 = graph.addEdge(a, b);
+		e1 = graph.addEdge(b, c);
+		e1 = graph.addEdge(c, d);
+		e1 = graph.addEdge(d, e);
+		e1 = graph.addEdge(e, h);
+		e1 = graph.addEdge(f, a);
+		e1 = graph.addEdge(f, b);
+		e1 = graph.addEdge(f, c);
+		e1 = graph.addEdge(f, d);
+		e1 = graph.addEdge(f, e);
+		e1 = graph.addEdge(f, g);
+		e1 = graph.addEdge(g, a);
+		e1 = graph.addEdge(g, b);
+		e1 = graph.addEdge(g, c);
+		e1 = graph.addEdge(g, d);
+		e1 = graph.addEdge(g, e);
+		e1 = graph.addEdge(g, f);
+		e1 = graph.addEdge(h, a);
+		
+
+	}
+	
+	@After
+	public void tearDown() throws Exception {
+	}
+	
+	@Test
+	public void Test1() {
+		this.cond1 = new Condition1<String, DefaultEdge>(this.graph);
+		
+		//this.cond1.classify(hole)
+		
+		HashSet<String> hole = this.cond1.call();
+		
+		assertTrue(hole.size() == 6);
+		
+	}	
+}

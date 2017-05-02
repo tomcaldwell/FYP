@@ -1,0 +1,61 @@
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Hashtable;
+
+import org.gt4j.annas.graph.DefaultEdge;
+import org.gt4j.annas.graph.EdgeInterface;
+import org.gt4j.annas.graph.GraphInterface;
+import org.gt4j.annas.graph.util.Utilities;
+
+public class Condition2 <V, E extends EdgeInterface<V>> extends Utilities {
+
+	private GraphInterface<V, E> graph;
+	private HashSet<V> VertexSet;
+	private HashSet<V> VertexSettmp;
+	private HashSet<E> EdgeSet;
+	private Hashtable<V, Integer> map;
+	private HashSet<V> CompVertexSet;
+	private HashSet<E> CompEdgeSet;
+	
+	private GraphInterface<V, E> comp;
+	private Collection<Collection<V>> conn;
+	
+	private HashSet<V> Hole = null;
+	private HashSet<V> Clique = null;
+	
+	public Condition2(final GraphInterface<V, E> graph) {
+		this.graph = graph;
+		this.EdgeSet = new HashSet<E>();
+		this.VertexSet = new HashSet<V>();
+		this.VertexSettmp = new HashSet<V>();
+		this.Hole = new HashSet<V>();
+		this.Clique = new HashSet<V>();
+		
+	}
+	
+
+	@SuppressWarnings("rawtypes")
+	public HashSet<V> call() {
+		this.comp = Utilities.getComplement(this.graph);
+		this.conn = Utilities.getConnectedComponents(this.graph);
+		System.out.println(this.conn);
+		this.EdgeSet.addAll(this.graph.getEdges());
+		this.VertexSet.addAll(this.graph.getVertices());
+		this.VertexSettmp.addAll(this.graph.getVertices());
+		this.CompEdgeSet.addAll(this.comp.getEdges());
+		this.CompVertexSet.addAll(this.comp.getVertices());
+		
+		for (Collection V : conn) {
+			if (V.size()>2) {
+				System.out.println("Graph satisfies condition 2");
+			}
+			else {
+				System.out.println("Graph does not satisfy condition 2");
+			}
+		}
+		
+		return VertexSet;
+		
+		
+	}	
+}

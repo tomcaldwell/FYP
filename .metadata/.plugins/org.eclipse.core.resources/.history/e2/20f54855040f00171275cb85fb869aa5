@@ -1,0 +1,147 @@
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Hashtable;
+
+import org.gt4j.annas.graph.DefaultEdge;
+import org.gt4j.annas.graph.EdgeInterface;
+import org.gt4j.annas.graph.GraphInterface;
+import org.gt4j.annas.graph.util.Utilities;
+
+public class Condition1 <V, E extends EdgeInterface<V>> extends Utilities {
+
+	private GraphInterface<V, E> graph;
+	private HashSet<V> VertexSet;
+	private HashSet<V> VertexSettmp;
+	private HashSet<E> EdgeSet;
+	private Hashtable<V, Integer> map;
+	private HashSet<V> CompVertexSet;
+	private HashSet<E> CompEdgeSet;
+	
+	private GraphInterface<V, E> comp;
+	
+	private HashSet<V> Hole = null;
+	private HashSet<V> Clique = null;
+	
+	public Condition1(final GraphInterface<V, E> g) {
+		this.graph = g;
+		this.EdgeSet = new HashSet<E>();
+		this.VertexSet = new HashSet<V>();
+		this.VertexSettmp = new HashSet<V>();
+		this.Hole = new HashSet<V>();
+		this.Clique = new HashSet<V>();
+		this.CompVertexSet = new HashSet<V>();
+		this.CompEdgeSet = new HashSet<E>();
+		
+	}
+	
+
+	public HashSet<V> call() {
+		this.comp = Utilities.getComplement(this.graph);
+		//System.out.println(this.comp);
+		this.EdgeSet.addAll(this.graph.getEdges());
+		this.VertexSet.addAll(this.graph.getVertices());
+		this.VertexSettmp.addAll(this.graph.getVertices());
+		this.CompEdgeSet.addAll(this.comp.getEdges());
+		this.CompVertexSet.addAll(this.comp.getVertices());
+		
+		for (V vertex : CompVertexSet) {
+			for (V i : CompVertexSet) {
+				if (vertex != i) {
+					if (!comp.getEdges(vertex, i).isEmpty()) {
+						this.Hole.add(vertex);
+						this.Hole.add(i);
+					}
+				}
+			}
+		}
+		
+		/**for (V vertex : VertexSet) {
+			for (V i : VertexSet) {
+				if (vertex != i) {
+					if (graph.getEdges(vertex, i).isEmpty()) {
+						this.Hole.add(vertex);
+						this.Hole.add(i);
+						this.VertexSettmp.remove(vertex);
+						this.VertexSettmp.remove(i);
+					}
+					else {
+						this.Clique.add(vertex);
+						this.VertexSettmp.remove(vertex);
+					}
+				}
+			}
+		}
+		this.Clique.removeAll(Hole);
+		if (Hole.size()<5) {
+			System.out.println("This Graph does not satisfy Condition 1");
+		}*/
+		
+		this.VertexSet.removeAll(Hole);
+		this.Clique.addAll(this.VertexSet);
+		//System.out.println(Clique);
+		//System.out.println(Hole);
+		return Hole;
+	}
+	
+	
+	public boolean classify(GraphInterface<V, E> hole) {
+		//System.out.println(this.call());
+		this.call();
+		System.out.println("Hole: " + Hole);
+		System.out.println("Clique: " + Clique);
+		/**this.EdgeSet.addAll(this.graph.getEdges());
+		this.VertexSet.addAll(Hole);
+		this.EdgeSet.addAll(this.graph.getEdges());
+		this.VertexSet.addAll(this.graph.getVertices());
+		*/
+		
+		
+		this.graph.removeVertices(this.Clique);
+		this.graph = hole;
+	
+		
+		boolean containsCycle = containsCycle();
+		boolean OrderSize = hole.getOrder() == hole.getSize();
+		
+		return containsCycle && OrderSize;
+		//return OrderSize;
+	}
+		
+	private boolean containsCycle() {	
+		for (V node : this.Hole)
+			this.map.put(node, -1);
+
+		for (V node : this.graph.getVertices()) {
+			if (this.map.get(node) == -1) {
+				if (this.visit(node, node)) {
+					return true;
+				}
+			}
+		}
+		return false;
+		
+		
+	}
+	
+	private boolean visit(V node, V pred) {
+		this.map.put(node, 0);
+
+		for (E arc : this.graph.getEdges(node)) {
+			V head = arc.getOtherEndpoint(node);
+			if (!head.equals(pred)) {
+				Integer h = this.map.get(head);
+				if (h == 0) {
+					return true;
+				} else if (h == -1) {
+					if (this.visit(head, node)) {
+						return true;
+					}
+				}
+			}
+		}
+		this.map.put(node, 1);
+		return false;
+
+	}
+
+}

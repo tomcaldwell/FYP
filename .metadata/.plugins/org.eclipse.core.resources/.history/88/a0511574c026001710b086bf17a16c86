@@ -1,0 +1,114 @@
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Set;
+
+import org.gt4j.annas.graph.EdgeInterface;
+import org.gt4j.annas.graph.GraphInterface;
+import org.gt4j.annas.graph.util.Utilities;
+
+public class Condition1 <V, E extends EdgeInterface<V>> extends Utilities {
+
+	private GraphInterface<V, E> graph;
+	private Hashtable<V, Integer> map;
+	
+	public Condition1(GraphInterface<V, E> graph) {
+		super();
+		this.graph = graph;
+	}
+	
+	public boolean Satisfies(GraphInterface<V, E> graph){
+		if(classify(call(graph))){
+			return true;
+		}
+		else{
+			return false;
+		}
+	}	
+
+	public HashSet<V> call(GraphInterface<V, E> graph) {
+		GraphInterface<V, E> comp = Utilities.getComplement(graph);
+		HashSet<V> VertexSet = new HashSet<V>();
+		VertexSet.addAll(graph.getVertices());
+				
+		HashSet<V> Hole = new HashSet<V>();
+		HashSet<V> Clique = new HashSet<V>();
+		
+		for(V vertex : VertexSet){
+			if(allNeighbours(comp,vertex).isEmpty()){
+				Clique.add(vertex);
+			}
+			else{
+				Hole.add(vertex);
+			}
+		}
+				
+		return Hole;
+	}
+	
+	public List<V> allNeighbours(GraphInterface<V, E> graph, V v){
+		List<V> neighbours = new ArrayList<V>();
+		Set<V> in = graph.getVertices();
+		List<V> out = new ArrayList<>(in);
+		
+		for (int j =out.size()-1; j >=0; j--) {
+			V ret = out.get(j);
+			if (!v.equals(ret) && graph.getEdges(v, ret).size() != 0 && !neighbours.contains(ret)) {
+				neighbours.add(ret);
+			}
+		}
+		return neighbours;
+	}
+	
+	public boolean classify(HashSet<V> Hole) {
+		
+		Set<V> G = this.graph.getVertices();
+		G.removeAll(Hole);
+		this.graph.removeVertices(G);
+		
+		boolean containsCycle = containsCycle(Hole);
+		boolean OrderSize = this.graph.getOrder() == this.graph.getSize();
+		
+		return containsCycle && OrderSize;
+		
+	}
+		
+	public boolean containsCycle(HashSet<V> hole) {	
+		for (V node : hole)
+			this.map.put(node, -1);
+
+		for (V node : this.graph.getVertices()) {
+			if (this.map.get(node) == -1) {
+				if (this.visit(node, node)) {
+					return true;
+				}
+			}
+		}
+		return false;
+		
+		
+	}
+	
+	private boolean visit(V node, V pred) {
+		this.map.put(node, 0);
+
+		for (E arc : this.graph.getEdges(node)) {
+			V head = arc.getOtherEndpoint(node);
+			if (!head.equals(pred)) {
+				Integer h = this.map.get(head);
+				if (h == 0) {
+					return true;
+				} else if (h == -1) {
+					if (this.visit(head, node)) {
+						return true;
+					}
+				}
+			}
+		}
+		this.map.put(node, 1);
+		return false;
+
+	}
+
+}

@@ -1,0 +1,76 @@
+import java.util.ArrayList;
+import java.util.List;
+
+import org.gt4j.annas.graph.DefaultEdge;
+import org.gt4j.annas.graph.GraphInterface;
+import org.gt4j.annas.graph.UndirectedGraph;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+public class testMaxClique {
+	
+	private MaxWeightedClique<String, DefaultEdge> maxClique;
+	
+	private GraphInterface<String, DefaultEdge> graph;
+	
+	@Before
+	public void setUp() throws Exception {
+
+		graph = new UndirectedGraph<String, DefaultEdge>(
+				DefaultEdge.class);
+
+		this.maxClique = new MaxWeightedClique<String, DefaultEdge>(makeGraph());
+	
+	}
+	
+	@After
+	public void tearDown() throws Exception {
+	}
+	
+	@Test
+	public void testInCLIQUE(){
+		List<String> vertices = new ArrayList<String>(makeGraph().getVertices());
+		List<String> Clique = new ArrayList<>();
+		String c = "C";
+		
+		this.maxClique.getClique(vertices, c, Clique);
+	}
+	
+	public GraphInterface<String, DefaultEdge> makeGraph(){
+		GraphInterface<String, DefaultEdge> graph = Graph();
+		return graph;
+	}
+	
+	public GraphInterface<String, DefaultEdge> Graph(){
+		String a = "A";
+		String b = "B";
+		String c = "C";
+		String d = "D";
+		String e = "E";
+		
+		
+
+		graph = new UndirectedGraph<String, DefaultEdge>(
+				DefaultEdge.class);
+
+		graph.addVertex(a);
+		graph.addVertex(b);
+		graph.addVertex(c);
+		graph.addVertex(d);
+		graph.addVertex(e);
+		
+
+		DefaultEdge e1 = graph.addEdge(a, b);
+		e1 = graph.addEdge(a, c);
+		e1 = graph.addEdge(b, c);
+		e1 = graph.addEdge(c, d);
+		e1 = graph.addEdge(b, d);
+		e1 = graph.addEdge(e, d);
+		e1 = graph.addEdge(e, b);
+		e1 = graph.addEdge(e, c);
+		
+		
+		return graph;
+	}	
+}
